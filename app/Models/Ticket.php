@@ -66,6 +66,57 @@ class Ticket extends Model
             ->when($filters['search'] ?? null, fn ($q, $v) => $q->where('title', 'like', '%'.$v.'%'));
     }
 
+    /** Échéance dépassée alors que le ticket n'est ni résolu ni fermé. */
+    public function isOverdue(): bool
+    {
+        return $this->deadline !== null
+            && $this->deadline->isPast()
+            && in_array($this->status, ['new', 'assigned', 'in_progress'], true);
+    }
+
+    /**
+     * Les 5 étapes du workflow avec leur état (done / current / todo) et la date
+     * à laquelle chacune a été atteinte (déduite de l'historique).
+     *
+     * @return array<int, array{status: string, label: string, state: string, at: ?\Carbon\CarbonInterface}>
+     */
+    public function workflowSteps(): array
+    {
+        $order = array_keys(self::STATUS_LABELS);
+        $current = (int) array_search($this->status, $order, true);
+        $last = count($order) - 1;
+
+        $reached = ['new' => $this->created_at];
+        foreach ($this->activities as $activity) {
+            if ($activity->action === 'assigned') {
+                $reached['assigned'] ??= $activity->created_at;
+            }
+            if ($activity->action === 'status_changed') {
+                foreach (self::STATUS_LABELS as $status => $label) {
+                    if (str_ends_with((string) $activity->description, '→ '.$label.'.')) {
+                        $reached[$status] ??= $activity->created_at;
+                    }
+                }
+            }
+        }
+
+        $steps = [];
+        foreach ($order as $i => $status) {
+            $steps[] = [
+                'status' => $status,
+                'label' => self::STATUS_LABELS[$status],
+                'state' => match (true) {
+                    $current === $last || $i < $current => 'done',
+                    $i === $current => 'current',
+                    default => 'todo',
+                },
+                'at' => $reached[$status] ?? null,
+            ];
+        }
+
+        return $steps;
+    }
+
     public function getStatusLabelAttribute(): string
     {
         return self::STATUS_LABELS[$this->status] ?? $this->status;

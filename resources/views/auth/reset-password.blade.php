@@ -1,39 +1,14 @@
-<x-guest-layout>
-    <form method="POST" action="{{ route('password.store') }}">
-        @csrf
-
-        <!-- Password Reset Token -->
-        <input type="hidden" name="token" value="{{ $request->route('token') }}">
-
-        <!-- Email Address -->
-        <div>
-            <x-input-label for="email" :value="__('Email')" />
-            <x-text-input id="email" class="block mt-1 w-full" type="email" name="email" :value="old('email', $request->email)" required autofocus autocomplete="username" />
-            <x-input-error :messages="$errors->get('email')" class="mt-2" />
-        </div>
-
-        <!-- Password -->
-        <div class="mt-4">
-            <x-input-label for="password" :value="__('Password')" />
-            <x-text-input id="password" class="block mt-1 w-full" type="password" name="password" required autocomplete="new-password" />
-            <x-input-error :messages="$errors->get('password')" class="mt-2" />
-        </div>
-
-        <!-- Confirm Password -->
-        <div class="mt-4">
-            <x-input-label for="password_confirmation" :value="__('Confirm Password')" />
-
-            <x-text-input id="password_confirmation" class="block mt-1 w-full"
-                                type="password"
-                                name="password_confirmation" required autocomplete="new-password" />
-
-            <x-input-error :messages="$errors->get('password_confirmation')" class="mt-2" />
-        </div>
-
-        <div class="flex items-center justify-end mt-4">
-            <x-primary-button>
-                {{ __('Reset Password') }}
-            </x-primary-button>
-        </div>
-    </form>
-</x-guest-layout>
+@extends('layouts.guest')
+@section('title', 'Nouveau mot de passe')
+@section('heading', 'Nouveau mot de passe')
+@section('lead', 'Choisissez un mot de passe d\'au moins 8 caractères.')
+@section('content')
+<form method="POST" action="{{ route('password.store') }}">
+    @csrf
+    <input type="hidden" name="token" value="{{ $request->route('token') }}">
+    <x-ui.input name="email" label="Adresse email" type="email" :value="$request->email" required autofocus autocomplete="username" />
+    <x-ui.input name="password" label="Nouveau mot de passe" type="password" required autocomplete="new-password" />
+    <x-ui.input name="password_confirmation" label="Confirmer le mot de passe" type="password" required autocomplete="new-password" />
+    <button class="btn btn-primary w-100">Enregistrer le mot de passe</button>
+</form>
+@endsection

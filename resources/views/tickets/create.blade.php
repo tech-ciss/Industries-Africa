@@ -1,22 +1,23 @@
 @extends('layouts.bootstrap')
-@section('title', 'Nouveau ticket')
+@section('title', 'Nouvelle demande')
 @section('content')
-<h1>Nouveau ticket</h1>
-<form method="POST" action="{{ route('tickets.store') }}" enctype="multipart/form-data">
-    @csrf
-    <div class="mb-3"><label class="form-label">Titre</label><input name="title" class="form-control" required minlength="5"></div>
-    <div class="mb-3"><label class="form-label">Description</label><textarea name="description" class="form-control" required minlength="20"></textarea></div>
-    <div class="mb-3"><label class="form-label">Catégorie</label>
-        <select name="category_id" class="form-select" required>
-            @foreach($categories as $c)<option value="{{ $c->id }}">{{ $c->name }}</option>@endforeach
-        </select>
+<x-ui.page-head title="Nouvelle demande" lead="Décrivez la panne : un technicien sera affecté dès que possible." />
+<div class="row g-4">
+    <div class="col-lg-8">
+        <div class="panel"><div class="panel-body">
+            @include('tickets._form', ['ticket' => null, 'action' => route('tickets.store'), 'submit' => 'Envoyer la demande'])
+        </div></div>
     </div>
-    <div class="mb-3"><label class="form-label">Priorité</label>
-        <select name="priority" class="form-select" required>
-            @foreach(['low','normal','high','critical'] as $p)<option value="{{ $p }}">{{ $p }}</option>@endforeach
-        </select>
+    <div class="col-lg-4">
+        <aside class="panel panel-note"><div class="panel-body">
+            <h2 class="h5">Pour une prise en charge rapide</h2>
+            <ul class="tips">
+                <li>Indiquez le lieu précis : bâtiment, étage, bureau.</li>
+                <li>Précisez depuis quand la panne existe.</li>
+                <li>Ajoutez une photo si elle aide à comprendre.</li>
+                <li>Réservez la priorité « Critique » aux risques pour la sécurité ou à l'arrêt complet d'une activité.</li>
+            </ul>
+        </div></aside>
     </div>
-    <div class="mb-3"><label class="form-label">Pièce jointe</label><input type="file" name="attachment" class="form-control"></div>
-    <button class="btn btn-primary">Créer</button>
-</form>
+</div>
 @endsection

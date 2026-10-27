@@ -1,93 +1,138 @@
 @extends('layouts.bootstrap')
 @section('title', 'Tableau de bord')
 @section('content')
-@php($user = auth()->user())
-<h1 class="mb-4">Tableau de bord</h1>
+@php
+    $user = auth()->user();
+    $lead = match (true) {
+        $user->isAdmin() => 'Vue d\'ensemble de l\'activité de maintenance.',
+        $user->isTechnician() => 'Vos interventions en cours et à venir.',
+        default => 'L\'avancement de vos demandes.',
+    };
+    $recentTitle = match (true) {
+        $user->isAdmin() => 'Derniers tickets',
+        $user->isTechnician() => 'Mes interventions récentes',
+        default => 'Mes dernières demandes',
+    };
+    $maxCategory = max(1, (int) ($stats['by_category']->max('tickets_count') ?? 1));
+    $maxLoad = max(1, (int) ($stats['workload']?->max('open_tickets_count') ?? 1));
+@endphp
 
-<div class="row g-3 mb-3">
-    <div class="col-md-3"><div class="card text-bg-primary"><div class="card-body"><h5>Total</h5><h2>{{ $stats['total'] }}</h2></div></div></div>
-    <div class="col-md-3"><div class="card text-bg-warning"><div class="card-body"><h5>Ouverts</h5><h2>{{ $stats['open'] }}</h2></div></div></div>
-    <div class="col-md-3"><div class="card text-bg-success"><div class="card-body"><h5>Résolus</h5><h2>{{ $stats['resolved'] }}</h2></div></div></div>
-    <div class="col-md-3"><div class="card text-bg-danger"><div class="card-body"><h5>Critiques ouverts</h5><h2>{{ $stats['critical'] }}</h2></div></div></div>
-</div>
+<x-ui.page-head :title="'Bonjour, '.($user->first_name ?: $user->name)" :lead="$lead">
+    <x-slot:actions>
+        <a class="btn btn-primary" href="{{ route('tickets.create') }}"><i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Nouvelle demande</a>
+    </x-slot:actions>
+</x-ui.page-head>
 
-<div class="row g-3 mb-4">
-    <div class="col-md-3"><div class="card"><div class="card-body"><h5>Techniciens actifs</h5><h2>{{ $stats['technicians'] }}</h2></div></div></div>
-    <div class="col-md-3"><div class="card"><div class="card-body"><h5>Temps moyen de résolution</h5><h2>{{ $stats['avg_resolution_label'] }}</h2></div></div></div>
-    <div class="col-md-3"><div class="card border-danger"><div class="card-body"><h5>En retard</h5><h2 class="text-danger">{{ $stats['overdue'] }}</h2></div></div></div>
+<section class="panel mb-3" aria-labelledby="pipeline-title">
+    <div class="panel-head">
+        <h2 id="pipeline-title">Répartition par statut</h2>
+        <a href="{{ route('tickets.index') }}" class="small">Voir tous les tickets</a>
+    </div>
+    <div class="panel-body">
+        @if($stats['total'] === 0)
+            <x-ui.empty icon="bi-inbox" title="Aucun ticket.">
+                <p>Les demandes de maintenance apparaîtront ici dès leur création.</p>
+            </x-ui.empty>
+        @else
+            <div class="pipeline">
+                @foreach(\App\Models\Ticket::STATUS_LABELS as $status => $label)
+                    @php($count = $stats['by_status'][$status])
+                    <a class="pipe pipe-{{ $status }} {{ $count === 0 ? 'is-empty' : '' }}" href="{{ route('tickets.index', ['status' => $status]) }}"
+                       style="flex-grow: {{ max($count, 0.2) }}">
+                        <strong>{{ $count }}</strong><span>{{ $label }}</span>
+                    </a>
+                @endforeach
+            </div>
+        @endif
+    </div>
+</section>
+
+<div class="ledger mb-4">
+    <div class="ledger-item"><div class="ledger-value">{{ $stats['total'] }}</div><div class="ledger-label">Tickets au total</div></div>
+    <div class="ledger-item"><div class="ledger-value">{{ $stats['open'] }}</div><div class="ledger-label">Ouverts</div></div>
+    <div class="ledger-item"><div class="ledger-value">{{ $stats['resolved'] }}</div><div class="ledger-label">Résolus</div></div>
+    <div class="ledger-item {{ $stats['critical'] > 0 ? 'is-alert' : 'is-zero' }}"><div class="ledger-value">{{ $stats['critical'] }}</div><div class="ledger-label">Critiques ouverts</div></div>
+    <div class="ledger-item {{ $stats['overdue'] > 0 ? 'is-alert' : 'is-zero' }}"><div class="ledger-value">{{ $stats['overdue'] }}</div><div class="ledger-label">En retard</div></div>
+    <div class="ledger-item"><div class="ledger-value">{{ $stats['avg_resolution_label'] }}</div><div class="ledger-label">Temps moyen de résolution</div></div>
+    <div class="ledger-item"><div class="ledger-value">{{ $stats['technicians'] }}</div><div class="ledger-label">Techniciens actifs</div></div>
     @if($user->isAdmin())
-        <div class="col-md-3"><div class="card border-warning"><div class="card-body">
-            <h5>Non assignés</h5>
-            <h2>{{ $stats['unassigned'] }}</h2>
-            <a href="{{ route('tickets.index', ['status' => 'new']) }}" class="small">Voir les tickets</a>
-        </div></div></div>
+        <div class="ledger-item {{ $stats['unassigned'] > 0 ? 'is-alert' : 'is-zero' }}">
+            <div class="ledger-value">{{ $stats['unassigned'] }}</div>
+            <div class="ledger-label">Non assignés</div>
+            @if($stats['unassigned'] > 0)<a class="ledger-hint" href="{{ route('tickets.index', ['status' => 'new']) }}">À affecter</a>@endif
+        </div>
     @elseif($user->isTechnician())
-        <div class="col-md-3"><div class="card"><div class="card-body">
-            <h5>Échéance sous 7 jours</h5>
-            <h2>{{ $stats['due_soon'] }}</h2>
-            <small class="text-muted">Temps saisi ce mois : {{ \App\Models\TimeEntry::format($stats['time_this_month']) }}</small>
-        </div></div></div>
+        <div class="ledger-item">
+            <div class="ledger-value">{{ $stats['due_soon'] }}</div>
+            <div class="ledger-label">Échéance sous 7 jours</div>
+            <div class="ledger-hint">Temps saisi ce mois : {{ \App\Models\TimeEntry::format($stats['time_this_month']) }}</div>
+        </div>
     @endif
 </div>
 
-<div class="row g-3 mb-4">
-    <div class="col-md-6">
-        <div class="card h-100"><div class="card-body">
-            <h5 class="mb-3">Répartition par statut</h5>
-            @foreach(\App\Models\Ticket::STATUS_LABELS as $status => $label)
-                @php($count = $stats['by_status'][$status])
-                @php($percent = $stats['total'] > 0 ? round($count / $stats['total'] * 100) : 0)
-                <div class="d-flex justify-content-between small"><span>{{ $label }}</span><span>{{ $count }}</span></div>
-                <div class="progress mb-2" style="height: 8px"><div class="progress-bar" style="width: {{ $percent }}%"></div></div>
-            @endforeach
-        </div></div>
-    </div>
-    <div class="col-md-6">
-        <div class="card h-100"><div class="card-body">
-            <h5 class="mb-3">Principales catégories</h5>
-            @forelse($stats['by_category'] as $category)
-                <div class="d-flex justify-content-between border-bottom py-1">
-                    <span>{{ $category->name }}</span><span class="badge bg-secondary">{{ $category->tickets_count }}</span>
+<div class="row g-3">
+    <div class="col-xl-8">
+        <section class="panel h-100" aria-labelledby="recent-title">
+            <div class="panel-head"><h2 id="recent-title">{{ $recentTitle }}</h2></div>
+            @if($recent->isEmpty())
+                <x-ui.empty icon="bi-card-checklist" title="Aucun ticket." />
+            @else
+                <div class="table-responsive">
+                    <table class="table table-flat">
+                        <thead><tr><th>N°</th><th>Ticket</th><th>Statut</th><th class="d-none d-md-table-cell">Priorité</th><th class="d-none d-lg-table-cell">Créé</th></tr></thead>
+                        <tbody>
+                        @foreach($recent as $t)
+                            <tr class="row-pr-{{ $t->priority }}">
+                                <td class="num">#{{ $t->id }}</td>
+                                <td class="title-cell">
+                                    <a href="{{ route('tickets.show', $t) }}">{{ $t->title }}</a>
+                                    <span class="sub">{{ $t->category?->name }}@if($t->isOverdue()) <span class="chip-late"><i class="bi bi-clock-history" aria-hidden="true"></i>En retard</span>@endif</span>
+                                </td>
+                                <td><x-ui.status :status="$t->status" /></td>
+                                <td class="d-none d-md-table-cell"><x-ui.priority :priority="$t->priority" /></td>
+                                <td class="d-none d-lg-table-cell"><x-ui.when :date="$t->created_at" /></td>
+                            </tr>
+                        @endforeach
+                        </tbody>
+                    </table>
                 </div>
-            @empty
-                <p class="text-muted mb-0">Aucun ticket.</p>
-            @endforelse
-        </div></div>
+            @endif
+        </section>
+    </div>
+
+    <div class="col-xl-4">
+        <div class="stack">
+            <section class="panel" aria-labelledby="cat-title">
+                <div class="panel-head"><h2 id="cat-title">Principales catégories</h2></div>
+                <div class="panel-body py-2">
+                    @forelse($stats['by_category'] as $category)
+                        <div class="bar-row">
+                            <span>{{ $category->name }}</span><strong class="tabular">{{ $category->tickets_count }}</strong>
+                            <span class="meter"><i style="width: {{ round($category->tickets_count / $maxCategory * 100) }}%"></i></span>
+                        </div>
+                    @empty
+                        <p class="text-soft my-3">Aucun ticket.</p>
+                    @endforelse
+                </div>
+            </section>
+
+            @if($user->isAdmin())
+                <section class="panel" aria-labelledby="load-title">
+                    <div class="panel-head"><h2 id="load-title">Charge des techniciens</h2></div>
+                    <div class="panel-body py-2">
+                        @forelse($stats['workload'] as $tech)
+                            <div class="bar-row">
+                                <span class="person"><x-ui.avatar :user="$tech" size="sm" /><span>{{ $tech->full_name }}</span></span>
+                                <strong class="tabular" title="Tickets assignés ou en cours">{{ $tech->open_tickets_count }}</strong>
+                                <span class="meter"><i style="width: {{ round($tech->open_tickets_count / $maxLoad * 100) }}%"></i></span>
+                            </div>
+                        @empty
+                            <p class="text-soft my-3">Aucun technicien actif.</p>
+                        @endforelse
+                    </div>
+                </section>
+            @endif
+        </div>
     </div>
 </div>
-
-@if($user->isAdmin())
-<div class="card mb-4"><div class="card-body">
-    <h5 class="mb-3">Charge des techniciens</h5>
-    <table class="table table-sm mb-0">
-        <thead><tr><th>Technicien</th><th class="text-end">Tickets en cours</th></tr></thead>
-        <tbody>
-        @forelse($stats['workload'] as $tech)
-            <tr><td>{{ $tech->full_name }}</td><td class="text-end">{{ $tech->open_tickets_count }}</td></tr>
-        @empty
-            <tr><td colspan="2" class="text-muted">Aucun technicien actif.</td></tr>
-        @endforelse
-        </tbody>
-    </table>
-</div></div>
-@endif
-
-<h3>Derniers tickets</h3>
-<table class="table table-striped">
-    <thead><tr><th>ID</th><th>Titre</th><th>Statut</th><th>Priorité</th><th>Demandeur</th><th></th></tr></thead>
-    <tbody>
-    @forelse($recent as $t)
-        <tr>
-            <td>{{ $t->id }}</td>
-            <td>{{ $t->title }}</td>
-            <td><span class="badge bg-secondary">{{ $t->status_label }}</span></td>
-            <td>{{ $t->priority_label }}</td>
-            <td>{{ $t->user?->full_name }}</td>
-            <td><a class="btn btn-sm btn-outline-primary" href="{{ route('tickets.show', $t) }}">Voir</a></td>
-        </tr>
-    @empty
-        <tr><td colspan="6" class="text-muted">Aucun ticket.</td></tr>
-    @endforelse
-    </tbody>
-</table>
 @endsection

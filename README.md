@@ -2,7 +2,7 @@
 
 Plateforme web de gestion des demandes de maintenance d'**AFRICA INDUSTRIES** : les employés déclarent leurs pannes, l'administrateur affecte un technicien, le technicien traite et suit l'intervention, et chaque action est tracée.
 
-> Dépôt : `github.com/<votre-nom>/maintenance-manager`
+> Dépôt : `github.com/tech-ciss/Industries-Africa`
 
 ## Sommaire
 
@@ -26,7 +26,7 @@ Plateforme web de gestion des demandes de maintenance d'**AFRICA INDUSTRIES** : 
 |---|---|
 | Backend | Laravel 13, PHP 8.3+ (développé avec PHP 8.4) |
 | Base de données | MySQL 8 (SQLite en mémoire pour les tests) |
-| Frontend | Blade + Bootstrap 5 (CDN) |
+| Frontend | Blade + Bootstrap 5 (CDN) + feuille de style maison `public/css/maintenance.css` (aucune étape de build) |
 | Authentification | Laravel Breeze (web), Laravel Sanctum (API) |
 | Exports | `maatwebsite/excel` (Excel), `barryvdh/laravel-dompdf` (PDF) |
 | Tests | PHPUnit |
@@ -51,13 +51,24 @@ Plateforme web de gestion des demandes de maintenance d'**AFRICA INDUSTRIES** : 
   - temps moyen de résolution (tableau de bord et rapports) ;
   - API REST Sanctum.
 
+## Interface
+
+L'interface est en français, responsive (menu latéral sur ordinateur, tiroir sur mobile) et accessible au clavier (lien d'évitement, focus visible, libellés ARIA, mouvement réduit respecté).
+
+- **Frise du workflow** : chaque ticket affiche ses 5 étapes (Nouveau → Fermé) avec la date de chaque étape atteinte.
+- **Priorité et statut lisibles d'un coup d'œil** : liseré coloré sur chaque ligne de liste, pastilles de statut, mention « En retard » quand l'échéance est dépassée.
+- **Prochaine étape mise en avant** : le technicien ou l'administrateur voit directement l'action à faire (affecter, démarrer, résoudre, fermer).
+- **Formulaires guidés** : choix de la priorité expliqué, compteur de caractères, erreurs en français sous chaque champ, saisies conservées après une erreur.
+- **Charte** : acier et jaune de signalisation, typographies Barlow Semi Condensed (titres) et IBM Plex Sans (texte). Les couleurs sont des variables CSS en tête de `public/css/maintenance.css` : modifier `--steel` et `--signal` suffit pour changer l'identité visuelle.
+- Les polices (Google Fonts), Bootstrap et Bootstrap Icons sont chargés depuis un CDN : une connexion internet est nécessaire pour l'affichage complet.
+
 ## Installation
 
-Prérequis : PHP 8.3+ (extensions `pdo_mysql`, `pdo_sqlite`, `mbstring`, `gd`, `zip`), Composer, MySQL 8, Node.js 20+.
+Prérequis : PHP 8.3+ (extensions `pdo_mysql`, `pdo_sqlite`, `mbstring`, `gd`, `zip`), Composer, MySQL 8.
 
 ```bash
-git clone https://github.com/<votre-nom>/maintenance-manager.git
-cd maintenance-manager
+git clone https://github.com/tech-ciss/Industries-Africa.git
+cd Industries-Africa
 
 composer install
 cp .env.example .env
@@ -69,9 +80,6 @@ mysql -u root -p -e "CREATE DATABASE maintenance_manager CHARACTER SET utf8mb4 C
 
 php artisan migrate --seed       # tables + jeu de données de démonstration
 php artisan storage:link         # accès aux pièces jointes
-
-npm install
-npm run build                    # assets Vite (pages d'authentification Breeze)
 
 php artisan serve                # http://localhost:8000
 ```
@@ -85,6 +93,7 @@ Variables principales du fichier `.env` :
 | `DB_CONNECTION`, `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` | Connexion MySQL | `mysql`, `127.0.0.1`, `3306`, `maintenance_manager`, `root` |
 | `MAIL_MAILER` | Envoi des notifications. `log` écrit les emails dans `storage/logs/laravel.log` | `log` |
 | `MAIL_FROM_ADDRESS`, `MAIL_FROM_NAME` | Expéditeur des emails | `maintenance@africa-industries.test` |
+| `APP_LOCALE` | Langue de l'interface et des messages de validation (traductions dans `lang/fr`) | `fr` |
 | `APP_FAKER_LOCALE` | Langue des données générées par les seeders | `fr_FR` |
 | `QUEUE_CONNECTION` | Les notifications sont envoyées de façon synchrone | `sync` |
 
@@ -186,6 +195,9 @@ app/
 ├── Services/               # TicketService (workflow), ActivityService, DashboardService
 ├── Notifications/          # création, assignation, résolution
 └── Exports/                # export Excel
+resources/views/            # pages Blade ; components/ui = composants réutilisables (statut, priorité, champs...)
+public/css|js/              # charte graphique et comportements légers (sans build)
+lang/fr/                    # traductions (validation, authentification, pagination)
 database/
 ├── factories/              # états cohérents avec le workflow (assigned, inProgress, resolved, closed)
 ├── migrations/
@@ -223,10 +235,11 @@ Les tests utilisent SQLite en mémoire (aucune configuration MySQL nécessaire).
 - **Rapports** : statistiques, feuilles Excel, rapport mensuel PDF, validation des filtres, accès réservé à l'administrateur.
 - **API** : authentification, périmètre, workflow, autorisations.
 - **Seeders** : cohérence du jeu de données avec le workflow.
+- **Interface** : rendu de chaque page par rôle, navigation, frise du workflow, états vides, messages en français.
 
 ## Choix de conception
 
-- **Pas d'inscription publique** : seul l'administrateur crée des comptes.
+- **Pas d'inscription publique** : seul l'administrateur crée des comptes. La suppression de son propre compte n'est pas proposée dans le profil (elle effacerait ses tickets) : un compte se désactive.
 - **Désactiver plutôt que supprimer** : un utilisateur ou une catégorie liés à des tickets ne peuvent pas être supprimés, pour ne pas perdre l'historique (les suppressions en cascade effaceraient les tickets).
 - **Tickets critiques** : le tableau de bord compte les tickets critiques encore à traiter.
 - **Temps passé** : saisi par le technicien assigné, une fois le travail commencé.

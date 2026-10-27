@@ -5,11 +5,12 @@ namespace App\Exports;
 use App\Models\Ticket;
 use App\Services\ReportService;
 use Illuminate\Support\Collection;
+use Maatwebsite\Excel\Concerns\Export;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithTitle;
 
-class StatisticsSheet implements FromCollection, ShouldAutoSize, WithTitle
+class StatisticsSheet implements Export, FromCollection, ShouldAutoSize, WithTitle
 {
     public function __construct(private array $filters = []) {}
 

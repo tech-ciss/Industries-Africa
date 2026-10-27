@@ -4,12 +4,13 @@ namespace App\Exports;
 
 use App\Models\Ticket;
 use Illuminate\Support\Collection;
+use Maatwebsite\Excel\Concerns\Export;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithTitle;
 
-class IncidentsSheet implements FromCollection, ShouldAutoSize, WithHeadings, WithTitle
+class IncidentsSheet implements Export, FromCollection, ShouldAutoSize, WithHeadings, WithTitle
 {
     public function __construct(private array $filters = []) {}
 

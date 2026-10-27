@@ -5,12 +5,12 @@
 <title>Rapport mensuel - {{ $label }}</title>
 <style>
     body { font-family: DejaVu Sans, sans-serif; font-size: 10px; color: #222; }
-    h1 { font-size: 18px; margin: 0 0 2px; }
-    h2 { font-size: 12px; margin: 16px 0 6px; border-bottom: 1px solid #999; padding-bottom: 2px; }
+    h1 { font-size: 18px; margin: 0 0 2px; color: #163a56; border-top: 6px solid #f2b705; padding-top: 8px; }
+    h2 { font-size: 12px; margin: 16px 0 6px; border-bottom: 2px solid #1f4f73; padding-bottom: 2px; color: #163a56; }
     .muted { color: #666; }
     table { width: 100%; border-collapse: collapse; }
     th, td { border: 1px solid #bbb; padding: 3px 5px; text-align: left; vertical-align: top; }
-    th { background: #eee; }
+    th { background: #e4edf3; color: #163a56; }
     tr { page-break-inside: avoid; }
     td.num, th.num { text-align: right; width: 70px; }
     .kpi td { width: 25%; text-align: center; border: 1px solid #bbb; padding: 6px; }

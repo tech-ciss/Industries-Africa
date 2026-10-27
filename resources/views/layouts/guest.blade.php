@@ -1,30 +1,48 @@
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
-    <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <meta name="csrf-token" content="{{ csrf_token() }}">
-
-        <title>{{ config('app.name', 'Laravel') }}</title>
-
-        <!-- Fonts -->
-        <link rel="preconnect" href="https://fonts.bunny.net">
-        <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
-
-        <!-- Scripts -->
-        @vite(['resources/css/app.css', 'resources/js/app.js'])
-    </head>
-    <body class="font-sans text-gray-900 antialiased">
-        <div class="min-h-screen flex flex-col sm:justify-center items-center pt-6 sm:pt-0 bg-gray-100">
-            <div>
-                <a href="/">
-                    <x-application-logo class="w-20 h-20 fill-current text-gray-500" />
-                </a>
-            </div>
-
-            <div class="w-full sm:max-w-md mt-6 px-6 py-4 bg-white shadow-md overflow-hidden sm:rounded-lg">
-                {{ $slot }}
-            </div>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>@yield('title', 'Connexion') - {{ config('app.name') }}</title>
+    @include('layouts.partials.assets')
+</head>
+<body>
+<a class="skip-link" href="#main">Aller au contenu</a>
+<div class="auth">
+    <div class="auth-brand">
+        <div class="sidebar-tape" aria-hidden="true"></div>
+        <a class="brand" href="{{ url('/') }}">
+            <span class="brand-mark"><i class="bi bi-wrench-adjustable" aria-hidden="true"></i></span>
+            <span class="brand-name">{{ config('app.name') }}<small>Africa Industries</small></span>
+        </a>
+        <div class="auth-pitch">
+            <h2>Une panne ? Signalez-la, suivez-la jusqu'à la réparation.</h2>
+            <p>Chaque demande est tracée de sa création à sa clôture, avec le technicien en charge et son historique.</p>
+            <ol class="rail auth-rail" aria-hidden="true">
+                @foreach(['Nouveau', 'Assigné', 'En cours', 'Résolu', 'Fermé'] as $i => $label)
+                    <li class="rail-step {{ $i < 2 ? 'is-done' : ($i === 2 ? 'is-current' : '') }}">
+                        <span class="rail-dot">@if($i < 2)<i class="bi bi-check-lg"></i>@endif</span>
+                        <span class="rail-label">{{ $label }}</span>
+                    </li>
+                @endforeach
+            </ol>
         </div>
-    </body>
+    </div>
+    <main id="main" class="auth-form">
+        <div class="auth-card">
+            <h1>@yield('heading')</h1>
+            <p class="lead-text">@yield('lead')</p>
+
+            @if(session('status'))
+                <div class="flash flash-success" role="status"><i class="bi bi-check-circle-fill" aria-hidden="true"></i><div>{{ session('status') }}</div></div>
+            @endif
+
+            @yield('content')
+        </div>
+    </main>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="{{ asset('js/maintenance.js') }}?v={{ filemtime(public_path('js/maintenance.js')) }}"></script>
+</body>
 </html>

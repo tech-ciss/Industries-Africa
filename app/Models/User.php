@@ -18,6 +18,17 @@ class User extends Authenticatable
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable, \Laravel\Sanctum\HasApiTokens;
 
+    public const ROLE_LABELS = [
+        'admin' => 'Administrateur',
+        'employee' => 'Employé',
+        'technician' => 'Technicien',
+    ];
+
+    public const STATUS_LABELS = [
+        'active' => 'Actif',
+        'inactive' => 'Inactif',
+    ];
+
     protected function casts(): array
     {
         return [
@@ -30,6 +41,23 @@ class User extends Authenticatable
     protected function fullName(): Attribute
     {
         return Attribute::get(fn () => trim($this->first_name.' '.$this->name));
+    }
+
+    protected function initials(): Attribute
+    {
+        return Attribute::get(fn () => mb_strtoupper(
+            mb_substr((string) $this->first_name, 0, 1).mb_substr((string) $this->name, 0, 1)
+        ));
+    }
+
+    protected function roleLabel(): Attribute
+    {
+        return Attribute::get(fn () => self::ROLE_LABELS[$this->role] ?? $this->role);
+    }
+
+    protected function statusLabel(): Attribute
+    {
+        return Attribute::get(fn () => self::STATUS_LABELS[$this->status] ?? $this->status);
     }
 
     public function tickets(): HasMany
